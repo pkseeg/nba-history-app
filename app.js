@@ -17,6 +17,7 @@ var teamColors = {
     "Kansas City Kings": "#013094",
     "LA Clippers": "#1D42BA",
     "Los Angeles Lakers": "#552583",
+    "Los Angeles Clippers": "#D50032",
     "Memphis Grizzlies": "#5D76A9",
     "Miami Heat": "#98002E",
     "Milwaukee Bucks": "#00471B",
@@ -113,7 +114,7 @@ function updateChart(container, data, color1, color2) {
     });
 
     // Set up SVG and chart dimensions
-    var margin = { top: 20, right: 20, bottom: 30, left: 40 },
+    var margin = { top: 20, right: 20, bottom: 30, left: 50 },
         width = 600 - margin.left - margin.right,
         height = 400 - margin.top - margin.bottom;
 
@@ -185,6 +186,15 @@ function updateChart(container, data, color1, color2) {
     .attr("dx", "-.8em") // Optional: adjust horizontal position
     .attr("dy", ".15em") // Optional: adjust vertical position
     .attr("transform", "rotate(-90)"); // Rotate the tick labels by 90 degrees
+
+// Create y-axis label
+svg.append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("y", 0 - margin.left) // Adjust the value here to leave more space at the top
+    .attr("x", 0 - (height / 2))
+    .attr("dy", "1em")
+    .style("text-anchor", "middle")
+    .text("Total Wins Above/Below .500");
 
 
     // Create y-axis
