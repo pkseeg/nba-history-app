@@ -5,3 +5,5 @@ I built this (very simple) javascript app which allows you to compare the histor
 The data was collected using a simply python script, included in this repository, which scrapes [basketball reference](https://www.basketball-reference.com/).
 
 You can play around with the site [here](https://pkseeg.github.io/nba-history-app/).
+
+![Site Screenshot](media/site_image.png)
