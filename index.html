@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The History of Every NBA Team</title>
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        #container {
+            max-width: 600px; /* Adjust the maximum width as needed */
+            width: 100%;
+            text-align: center;
+        }
+
+        #chart {
+            margin-top: 20px;
+        }
+
+        label, select {
+            margin-bottom: 10px;
+        }
+    </style>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+</head>
+<body>
+    <div id="container">
+        <h1>The History of Every NBA Team</h1>
+        <label for="csvSelect">Pick a Team:</label>
+        <select id="csvSelect" onchange="loadData()">
+            <option value="data/Atlanta Hawks_win_loss.csv">Atlanta Hawks</option>
+            <option value="data/Boston Celtics_win_loss.csv">Boston Celtics</option>
+            <option value="data/Brooklyn Nets_win_loss.csv">Brooklyn Nets</option>
+            <option value="data/Buffalo Braves_win_loss.csv">Buffalo Braves</option>
+            <option value="data/Charlotte Bobcats_win_loss.csv">Charlotte Bobcats</option>
+            <option value="data/Charlotte Hornets_win_loss.csv">Charlotte Hornets</option>
+            <option value="data/Chicago Bulls_win_loss.csv">Chicago Bulls</option>
+            <option value="data/Cleveland Cavaliers_win_loss.csv">Cleveland Cavaliers</option>
+            <option value="data/Dallas Mavericks_win_loss.csv">Dallas Mavericks</option>
+            <option value="data/Denver Nuggets_win_loss.csv">Denver Nuggets</option>
+            <option value="data/Detroit Pistons_win_loss.csv">Detroit Pistons</option>
+            <option value="data/Golden State Warriors_win_loss.csv">Golden State Warriors</option>
+            <option value="data/Houston Rockets_win_loss.csv">Houston Rockets</option>
+            <option value="data/Indiana Pacers_win_loss.csv">Indiana Pacers</option>
+            <option value="data/Kansas City Kings_win_loss.csv">Kansas City Kings</option>
+            <option value="data/Los Angeles Clippers_win_loss.csv">Los Angeles Clippers</option>
+            <option value="data/Los Angeles Lakers_win_loss.csv">Los Angeles Lakers</option>
+            <option value="data/Memphis Grizzlies_win_loss.csv">Memphis Grizzlies</option>
+            <option value="data/Miami Heat_win_loss.csv">Miami Heat</option>
+            <option value="data/Milwaukee Bucks_win_loss.csv">Milwaukee Bucks</option>
+            <option value="data/Minnesota Timberwolves_win_loss.csv">Minnesota Timberwolves</option>
+            <option value="data/New Jersey Nets_win_loss.csv">New Jersey Nets</option>
+            <option value="data/New Orleans Hornets_win_loss.csv">New Orleans Hornets</option>
+            <option value="data/New Orleans Pelicans_win_loss.csv">New Orleans Pelicans</option>
+            <option value="data/New York Knicks_win_loss.csv">New York Knicks</option>
+            <option value="data/New York Nets_win_loss.csv">New York Nets</option>
+            <option value="data/Oklahoma City Hornets_win_loss.csv">Oklahoma City Hornets</option>
+            <option value="data/Oklahoma City Thunder_win_loss.csv">Oklahoma City Thunder</option>
+            <option value="data/Orlando Magic_win_loss.csv">Orlando Magic</option>
+            <option value="data/Philadelphia 76ers_win_loss.csv">Philadelphia 76ers</option>
+            <option value="data/Phoenix Suns_win_loss.csv">Phoenix Suns</option>
+            <option value="data/Portland Trail Blazers_win_loss.csv">Portland Trail Blazers</option>
+            <option value="data/Sacramento Kings_win_loss.csv">Sacramento Kings</option>
+            <option value="data/San Antonio Spurs_win_loss.csv">San Antonio Spurs</option>
+            <option value="data/Toronto Raptors_win_loss.csv">Toronto Raptors</option>
+            <option value="data/Utah Jazz_win_loss.csv" selected>Utah Jazz</option>
+            <option value="data/Vancouver Grizzlies_win_loss.csv">Vancouver Grizzlies</option>
+            <option value="data/Washington Bullets_win_loss.csv">Washington Bullets</option>
+            <option value="data/Washington Wizards_win_loss.csv">Washington Wizards</option>
+        </select>
+        <br/>
+        <label for="csvSelect2">Pick another Team:</label>
+        <select id="csvSelect2" onchange="loadData()">
+            <option value="data/Atlanta Hawks_win_loss.csv">Atlanta Hawks</option>
+            <option value="data/Boston Celtics_win_loss.csv">Boston Celtics</option>
+            <option value="data/Brooklyn Nets_win_loss.csv">Brooklyn Nets</option>
+            <option value="data/Buffalo Braves_win_loss.csv">Buffalo Braves</option>
+            <option value="data/Charlotte Bobcats_win_loss.csv">Charlotte Bobcats</option>
+            <option value="data/Charlotte Hornets_win_loss.csv">Charlotte Hornets</option>
+            <option value="data/Chicago Bulls_win_loss.csv">Chicago Bulls</option>
+            <option value="data/Cleveland Cavaliers_win_loss.csv">Cleveland Cavaliers</option>
+            <option value="data/Dallas Mavericks_win_loss.csv">Dallas Mavericks</option>
+            <option value="data/Denver Nuggets_win_loss.csv">Denver Nuggets</option>
+            <option value="data/Detroit Pistons_win_loss.csv">Detroit Pistons</option>
+            <option value="data/Golden State Warriors_win_loss.csv" selected>Golden State Warriors</option>
+            <option value="data/Houston Rockets_win_loss.csv">Houston Rockets</option>
+            <option value="data/Indiana Pacers_win_loss.csv">Indiana Pacers</option>
+            <option value="data/Kansas City Kings_win_loss.csv">Kansas City Kings</option>
+            <option value="data/Los Angeles Clippers_win_loss.csv">Los Angeles Clippers</option>
+            <option value="data/Los Angeles Lakers_win_loss.csv">Los Angeles Lakers</option>
+            <option value="data/Memphis Grizzlies_win_loss.csv">Memphis Grizzlies</option>
+            <option value="data/Miami Heat_win_loss.csv">Miami Heat</option>
+            <option value="data/Milwaukee Bucks_win_loss.csv">Milwaukee Bucks</option>
+            <option value="data/Minnesota Timberwolves_win_loss.csv">Minnesota Timberwolves</option>
+            <option value="data/New Jersey Nets_win_loss.csv">New Jersey Nets</option>
+            <option value="data/New Orleans Hornets_win_loss.csv">New Orleans Hornets</option>
+            <option value="data/New Orleans Pelicans_win_loss.csv">New Orleans Pelicans</option>
+            <option value="data/New York Knicks_win_loss.csv">New York Knicks</option>
+            <option value="data/New York Nets_win_loss.csv">New York Nets</option>
+            <option value="data/Oklahoma City Hornets_win_loss.csv">Oklahoma City Hornets</option>
+            <option value="data/Oklahoma City Thunder_win_loss.csv">Oklahoma City Thunder</option>
+            <option value="data/Orlando Magic_win_loss.csv">Orlando Magic</option>
+            <option value="data/Philadelphia 76ers_win_loss.csv">Philadelphia 76ers</option>
+            <option value="data/Phoenix Suns_win_loss.csv">Phoenix Suns</option>
+            <option value="data/Portland Trail Blazers_win_loss.csv">Portland Trail Blazers</option>
+            <option value="data/Sacramento Kings_win_loss.csv">Sacramento Kings</option>
+            <option value="data/San Antonio Spurs_win_loss.csv">San Antonio Spurs</option>
+            <option value="data/Toronto Raptors_win_loss.csv">Toronto Raptors</option>
+            <option value="data/Utah Jazz_win_loss.csv">Utah Jazz</option>
+            <option value="data/Vancouver Grizzlies_win_loss.csv">Vancouver Grizzlies</option>
+            <option value="data/Washington Bullets_win_loss.csv">Washington Bullets</option>
+            <option value="data/Washington Wizards_win_loss.csv">Washington Wizards</option>
+        </select>
+        <div id="chart"></div>
+        <div id="legend"></div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
