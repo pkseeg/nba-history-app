@@ -34,6 +34,7 @@ var teamColors = {
     "Portland Trail Blazers": "#E03A3E",
     "Sacramento Kings": "#5A2D81",
     "San Antonio Spurs": "#C4CED4",
+    "Seattle SuperSonics": "#00552F",
     "Toronto Raptors": "#CE1141",
     "Utah Jazz": "#002B5C",
     "Vancouver Grizzlies": "#018FA1",
