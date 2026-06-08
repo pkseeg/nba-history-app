@@ -1,253 +1,225 @@
-// Define a color dictionary with team names as keys and corresponding colors as values
-var teamColors = {
-    "Atlanta Hawks": "#E03A3E",
-    "Boston Celtics": "#008348",
-    "Brooklyn Nets": "#000000",
-    "Buffalo Braves": "#E75300",
-    "Charlotte Bobcats": "#E75512",
-    "Charlotte Hornets": "#1D1160",
-    "Chicago Bulls": "#CE1141",
-    "Cleveland Cavaliers": "#860038",
-    "Dallas Mavericks": "#007DC5",
-    "Denver Nuggets": "#4D90CD",
-    "Detroit Pistons": "#C8102E",
-    "Golden State Warriors": "#FFC72C",
-    "Houston Rockets": "#CE1141",
-    "Indiana Pacers": "#00275D",
-    "Kansas City Kings": "#013094",
-    "LA Clippers": "#1D42BA",
-    "Los Angeles Lakers": "#552583",
-    "Los Angeles Clippers": "#D50032",
-    "Memphis Grizzlies": "#5D76A9",
-    "Miami Heat": "#98002E",
-    "Milwaukee Bucks": "#00471B",
-    "Minnesota Timberwolves": "#236192",
-    "New Orleans Hornets": "#008EAB",
-    "New Orleans Pelicans": "#0C2340",
-    "New York Knicks": "#F58426",
-    "New York Nets": "#000000",
-    "Oklahoma City Hornets": "#1D1160",
-    "Oklahoma City Thunder": "#007DC3",
-    "Orlando Magic": "#007DC5",
-    "Philadelphia 76ers": "#006BB6",
-    "Phoenix Suns": "#1D1160",
-    "Portland Trail Blazers": "#E03A3E",
-    "Sacramento Kings": "#5A2D81",
-    "San Antonio Spurs": "#C4CED4",
-    "Seattle SuperSonics": "#00552F",
-    "Toronto Raptors": "#CE1141",
-    "Utah Jazz": "#002B5C",
-    "Vancouver Grizzlies": "#018FA1",
-    "Washington Bullets": "#DA101E",
-    "Washington Wizards": "#002B5C",
-    // Add more teams and colors as needed
-};
-// Function to load data based on selected CSV files
-function loadData() {
-    var selectedCsv1 = document.getElementById("csvSelect").value;
-    var selectedCsv2 = document.getElementById("csvSelect2").value;
+const COLORS = { team1: "#e8e8e8", team2: "#f97316" };
 
-    // Load data for the first team
-    d3.csv(selectedCsv1).then(function(data1) {
-        // Load data for the second team
-        d3.csv(selectedCsv2).then(function(data2) {
-            // Combine data from both teams
-            var combinedData = combineData(data1, data2);
+let nbaData = null;
+let teamNames = [];
 
-            // Clear existing container
-            d3.select("#chart-container").selectAll("*").remove();
+async function init() {
+  try {
+    const res = await fetch("data/nba_data.json");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    nbaData = await res.json();
+  } catch (err) {
+    document.getElementById("loading").textContent =
+      "failed to load data — run scraper.py first";
+    return;
+  }
 
-            // Create a container div to hold both the chart and the legend
-            var container = d3.select("#chart-container");
+  teamNames = Object.keys(nbaData).sort();
+  document.getElementById("loading").style.display = "none";
 
-            // Clear existing chart
-            d3.select("#chart").selectAll("*").remove();
-            d3.select("#legend").selectAll("*").remove();
+  const sel1 = document.getElementById("team1");
+  const sel2 = document.getElementById("team2");
+  const bosIdx = teamNames.indexOf("Boston Celtics");
+  const lalIdx = teamNames.indexOf("Los Angeles Lakers");
 
-            // Extract team names from the selected CSV file paths
-            var team1 = extractTeamName(selectedCsv1);
-            var team2 = extractTeamName(selectedCsv2);
+  teamNames.forEach((name, i) => {
+    const o1 = new Option(name, name, i === bosIdx, i === bosIdx);
+    const o2 = new Option(name, name, i === lalIdx, i === lalIdx);
+    sel1.add(o1);
+    sel2.add(o2);
+  });
 
-            // Update the chart & legend with combined data
-            updateChart(container, combinedData, teamColors[team1], teamColors[team2]);
-            updateLegend(container, team1, team2, teamColors[team1], teamColors[team2]);
-        });
-    });
+  sel1.addEventListener("change", render);
+  sel2.addEventListener("change", render);
+  render();
 }
 
-// Initial load with default CSV files
-d3.csv("data/Utah Jazz_win_loss.csv").then(function(data1) {
-    // Load data for the second team (you can replace this with a default second team)
-    d3.csv("data/Golden State Warriors_win_loss.csv").then(function(data2) {
-        // Combine data from both teams
-        var combinedData = combineData(data1, data2);
+function mergeYears(s1, s2) {
+  // Build year→value maps for both series
+  const map1 = Object.fromEntries(s1.map((d) => [d.year, d.win_loss]));
+  const map2 = Object.fromEntries(s2.map((d) => [d.year, d.win_loss]));
 
-        // Create a container div to hold both the chart and the legend
-        var container = d3.select("#chart-container");
+  const allYears = [...new Set([...Object.keys(map1), ...Object.keys(map2)])]
+    .map(Number)
+    .sort((a, b) => a - b);
 
-        // Update the chart & legend with combined data
-        updateChart(container, combinedData, teamColors["Utah Jazz"], teamColors["Golden State Warriors"]);
-        updateLegend(container, "Utah Jazz", "Golden State Warriors", teamColors["Utah Jazz"], teamColors["Golden State Warriors"]);
+  // For missing years, carry the last known value (or 0 if before franchise started)
+  function fill(map, years) {
+    const out = {};
+    let last = 0;
+    years.forEach((y) => {
+      if (map[y] !== undefined) last = map[y];
+      out[y] = last;
     });
-});
+    return out;
+  }
 
-// Combine data from two teams
-function combineData(data1, data2) {
-    // Assuming both datasets have the same structure (years, win_loss)
-    // Combine data by adding win_loss values from the second dataset to the first dataset
-    var combinedData = data1.map(function(d, i) {
-        return {
-            year: d.year,
-            win_loss1: d.win_loss,
-            win_loss2: data2[i].win_loss
-        };
-    });
+  const filled1 = fill(map1, allYears);
+  const filled2 = fill(map2, allYears);
 
-    return combinedData;
+  return allYears.map((y) => ({
+    year: y,
+    v1: filled1[y],
+    v2: filled2[y],
+  }));
 }
 
+function render() {
+  const t1 = document.getElementById("team1").value;
+  const t2 = document.getElementById("team2").value;
+  const s1 = nbaData[t1];
+  const s2 = nbaData[t2];
+  const merged = mergeYears(s1, s2);
 
-// Load data from CSV file
-function updateChart(container, data, color1, color2) {
-    // Convert strings to numbers if necessary
-    data.forEach(function(d) {
-        d.win_loss = +d.win_loss;
-    });
+  const container = document.getElementById("chart");
+  container.innerHTML = "";
 
-    // Set up SVG and chart dimensions
-    var margin = { top: 20, right: 20, bottom: 30, left: 50 },
-        width = 600 - margin.left - margin.right,
-        height = 400 - margin.top - margin.bottom;
+  const margin = { top: 14, right: 14, bottom: 46, left: 56 };
+  const totalWidth = container.clientWidth || 780;
+  const width = totalWidth - margin.left - margin.right;
+  const height = 340 - margin.top - margin.bottom;
 
-    // Create SVG element within the container
-    var svg = container.append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
+  const svg = d3
+    .select("#chart")
+    .append("svg")
+    .attr("width", totalWidth)
+    .attr("height", height + margin.top + margin.bottom);
+
+  const g = svg
     .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    .attr("transform", `translate(${margin.left},${margin.top})`);
 
+  // Scales
+  const x = d3.scaleBand()
+    .domain(merged.map((d) => d.year))
+    .range([0, width])
+    .padding(0.15);
 
-    // Create SVG element
-    var svg = d3.select("#chart")
-        .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  const allVals = merged.flatMap((d) => [d.v1, d.v2]);
+  const vMin = Math.min(0, d3.min(allVals));
+  const vMax = Math.max(0, d3.max(allVals));
+  const pad = (vMax - vMin) * 0.06;
 
-    // Create x and y scales
-    var x = d3.scaleBand().range([0, width]).padding(0.1);
-    var y = d3.scaleLinear().range([height, 0]);
+  const y = d3.scaleLinear()
+    .domain([vMin - pad, vMax + pad])
+    .range([height, 0]);
 
-    
+  const y0 = y(0);
 
-    // Set domain of scales based on data
-    x.domain(data.map(function(d) { return d.year; }));
-    y.domain([-700, 950]);
+  // Gridlines
+  g.append("g")
+    .attr("class", "gridlines")
+    .selectAll("line")
+    .data(y.ticks(6))
+    .join("line")
+    .attr("x1", 0)
+    .attr("x2", width)
+    .attr("y1", (d) => y(d))
+    .attr("y2", (d) => y(d))
+    .attr("stroke", "#2a2a2a")
+    .attr("stroke-width", 1);
 
-    // Create bars for the first team
-    svg.selectAll(".bar1")
-    .data(data)
-    .enter().append("rect")
-    .attr("class", "bar1")
-    .attr("x", function(d) { return x(d.year); })
-    .attr("width", x.bandwidth())  // Adjust the width as needed
-    .attr("y", function(d) {
-        return d.win_loss1 < 0 ? y(0) : y(d.win_loss1);
-    })
-    .attr("height", function(d) {
-        return Math.abs(y(0) - y(d.win_loss1));
-    })
-    .attr("fill", color1)   // Set the fill color for the first team
-    .attr("opacity", 0.8);       // Set the opacity (adjust as needed)
+  // Zero line
+  g.append("line")
+    .attr("x1", 0)
+    .attr("x2", width)
+    .attr("y1", y0)
+    .attr("y2", y0)
+    .attr("stroke", "#444")
+    .attr("stroke-width", 1.5);
 
-    // Create bars for the second team
-    svg.selectAll(".bar2")
-    .data(data)
-    .enter().append("rect")
+  // Bars for team 2 (behind)
+  g.selectAll(".bar2")
+    .data(merged)
+    .join("rect")
     .attr("class", "bar2")
-    .attr("x", function(d) { return x(d.year); })
-    .attr("width", x.bandwidth())  // Adjust the width as needed
-    .attr("y", function(d) {
-        return d.win_loss2 < 0 ? y(0) : y(d.win_loss2);
+    .attr("x", (d) => x(d.year))
+    .attr("width", x.bandwidth())
+    .attr("y", (d) => (d.v2 >= 0 ? y(d.v2) : y0))
+    .attr("height", (d) => Math.abs(y(d.v2) - y0))
+    .attr("fill", COLORS.team2)
+    .attr("opacity", 0.45);
+
+  // Bars for team 1 (front)
+  g.selectAll(".bar1")
+    .data(merged)
+    .join("rect")
+    .attr("class", "bar1")
+    .attr("x", (d) => x(d.year))
+    .attr("width", x.bandwidth())
+    .attr("y", (d) => (d.v1 >= 0 ? y(d.v1) : y0))
+    .attr("height", (d) => Math.abs(y(d.v1) - y0))
+    .attr("fill", COLORS.team1)
+    .attr("opacity", 0.85);
+
+  // Invisible hover rects
+  const tooltip = document.getElementById("tooltip");
+  g.selectAll(".hover-rect")
+    .data(merged)
+    .join("rect")
+    .attr("class", "hover-rect")
+    .attr("x", (d) => x(d.year))
+    .attr("width", x.bandwidth())
+    .attr("y", 0)
+    .attr("height", height)
+    .attr("fill", "transparent")
+    .on("mousemove", (event, d) => {
+      const sign = (v) => (v >= 0 ? `+${v}` : `${v}`);
+      tooltip.innerHTML =
+        `<strong>${d.year - 1}–${String(d.year).slice(-2)}</strong><br>` +
+        `<span style="color:${COLORS.team1}">${t1}</span>: ${sign(d.v1)}<br>` +
+        `<span style="color:${COLORS.team2}">${t2}</span>: ${sign(d.v2)}`;
+      tooltip.style.opacity = 1;
+      tooltip.style.left = event.clientX + 14 + "px";
+      tooltip.style.top = event.clientY - 10 + "px";
     })
-    .attr("height", function(d) {
-        return Math.abs(y(0) - y(d.win_loss2));
-    })
-    .attr("fill", color2)      // Set the fill color for the second team
-    .attr("opacity", 0.4);       // Set the opacity (adjust as needed)
+    .on("mouseleave", () => {
+      tooltip.style.opacity = 0;
+    });
 
+  // X-axis: only show every ~decade tick to avoid clutter
+  const allYears = merged.map((d) => d.year);
+  const tickStep = allYears.length > 50 ? 10 : 5;
+  const xTicks = allYears.filter((y) => y % tickStep === 0);
 
-   // Create x-axis
-    svg.append("g")
-    .attr("transform", "translate(0," + height + ")")
-    .call(d3.axisBottom(x))
-    .selectAll("text")
-    .style("text-anchor", "end") // Optional: set text anchor to end
-    .attr("dx", "-.8em") // Optional: adjust horizontal position
-    .attr("dy", ".15em") // Optional: adjust vertical position
-    .attr("transform", "rotate(-90)"); // Rotate the tick labels by 90 degrees
+  g.append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(
+      d3
+        .axisBottom(x)
+        .tickValues(xTicks)
+        .tickFormat((d) => `'${String(d).slice(-2)}`)
+    )
+    .call((ax) => ax.select(".domain").attr("stroke", "#333"))
+    .call((ax) =>
+      ax.selectAll("text")
+        .attr("fill", "#888")
+        .attr("font-size", "0.7rem")
+    )
+    .call((ax) => ax.selectAll(".tick line").attr("stroke", "#333"));
 
-// Create y-axis label
-svg.append("text")
-    .attr("transform", "rotate(-90)")
-    .attr("y", 0 - margin.left) // Adjust the value here to leave more space at the top
-    .attr("x", 0 - (height / 2))
-    .attr("dy", "1em")
-    .style("text-anchor", "middle")
-    .text("Total Wins Above/Below .500");
+  // Y-axis
+  g.append("g")
+    .call(d3.axisLeft(y).ticks(6).tickFormat(d3.format("+,d")))
+    .call((ax) => ax.select(".domain").remove())
+    .call((ax) =>
+      ax.selectAll("text")
+        .attr("fill", "#888")
+        .attr("font-size", "0.7rem")
+    )
+    .call((ax) => ax.selectAll(".tick line").attr("stroke", "#2a2a2a"));
 
-
-    // Create y-axis
-    svg.append("g")
-        .call(d3.axisLeft(y));
+  // Legend
+  const legendEl = document.getElementById("legend");
+  legendEl.innerHTML = `
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:${COLORS.team1};opacity:0.85"></div>
+      <span>${t1}</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:${COLORS.team2};opacity:0.65"></div>
+      <span>${t2}</span>
+    </div>`;
 }
 
-// Update legend based on selected teams
-function updateLegend(container, team1, team2, color1, color2) {
-    var legend = d3.select("#legend");
-
-    // Create a legend container div
-    var legendContainer = container.append("div")
-        .attr("id", "legend")
-        .style("display", "flex")
-        .style("justify-content", "center");
-
-    // Create a legend for the first team with a colored square
-    var legendItem1 = legend.append("div")
-        .style("display", "flex")
-        .style("align-items", "center");
-
-    legendItem1.append("div")
-        .style("width", "10px")
-        .style("height", "10px")
-        .style("background-color", color1)
-        .style("opacity", 0.8)
-        .style("margin-right", "5px");
-
-    legendItem1.append("div")
-        .text(team1);
-
-    // Create a legend for the second team with a colored square
-    var legendItem2 = legend.append("div")
-        .style("display", "flex")
-        .style("align-items", "center");
-
-    legendItem2.append("div")
-        .style("width", "10px")
-        .style("height", "10px")
-        .style("background-color", color2)
-        .style("opacity", 0.4)
-        .style("margin-right", "5px");
-
-    legendItem2.append("div")
-        .text(team2);
-}
-
-// Extract team name from the CSV file path
-function extractTeamName(csvPath) {
-    var startIndex = csvPath.lastIndexOf("/") + 1; // Adjust if using Windows file paths
-    var endIndex = csvPath.indexOf("_win_loss.csv");
-    var teamName = csvPath.substring(startIndex, endIndex);
-    return teamName;
-}
+init();
